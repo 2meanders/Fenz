@@ -94,7 +94,7 @@ namespace fenz
     public:
         /// @brief Creates a Moment representing the current time.
         /// @return Moment representing the current time.
-        static constexpr Moment now()
+        static Moment now()
         {
             return {fenzTimeSource()};
         }
