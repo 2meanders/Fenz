@@ -2,7 +2,9 @@
 #define FENZ_ARRAY_HPP
 
 namespace fenz
-{
+{   
+    template <typename T, int N>
+    class Array;
 
     /// @brief A non-owning view of a portion of an array.
     /// @tparam T Type of the elements in the array.
@@ -15,37 +17,42 @@ namespace fenz
         template <typename, int>
         friend class Iterable;
 
+        friend class Array<T, N>;
+
     private:
         // A pointer to the first element of the array.
         T *data_;
 
+    private:
+        // To allow view creation
+        constexpr Iterable(T* data);
     public:
         /// @brief Constructs a Iterable from a pointer to data.
-        /// @param data Pointer to the data.
-        /// @warning It is assumed that the data pointer points to an array of at least N elements.
-        Iterable(T *data);
+        /// @param arr Pointer to the data.
+        template <int M>
+        constexpr Iterable(T (&arr)[M]);
 
         /// @brief Returns a reference to the element at the specified index.
         /// @tparam i Index of the element to access.
         /// @return Reference to the element at the specified index.
         template <int i>
-        T &at();
+        constexpr T &at();
 
         /// @brief Returns a const reference to the element at the specified index.
         /// @tparam i Index of the element to access.
         /// @return Const reference to the element at the specified index.
         template <int i>
-        const T &at() const;
+        constexpr const T &at() const;
 
         /// @brief Performs an operation on each element of the array.
         /// @param func A callable that is the operation to perform on each element. The parameters to the function are `(const T&, int)` — the element and its index.
         template <typename Func>
-        void enumerate(Func func);
+        constexpr void enumerate(Func func);
 
         /// @brief Performs a const operation on each element of the array.
         /// @param func A callable that is the const operation to perform on each element. The parameters to the function are `(const T&, int)` — the element and its index.
         template <typename Func>
-        void enumerate(Func func) const;
+        constexpr const void enumerate(Func func) const;
 
         /// @brief Runs `func` on elements in `other` and `this` in parallel.
         /// @details For each index `i` from `0` to `N-1`, the function calls `func`.
@@ -54,7 +61,7 @@ namespace fenz
         /// @param func A callable taking `(T&, U&)` —
         ///      the element from this iterable and the element from `other`.
         template <typename U, typename Func>
-        void zip(Iterable<U, N> &other, Func func);
+        constexpr void zip(Iterable<U, N> &other, Func func);
 
         /// @brief Runs `func` on elements in `other` and `this` in parallel.
         /// @details For each index `i` from `0` to `N-1`, the function calls `func`.
@@ -63,13 +70,13 @@ namespace fenz
         /// @param func A callable taking `(const T&, const U&)` —
         ///      the element from this iterable and the element from `other`.
         template <typename U, typename Func>
-        void zip(const Iterable<U, N> &other, Func func) const;
+        constexpr void zip(const Iterable<U, N> &other, Func func) const;
 
         // Range-based for support
-        T *begin() { return data_; }
-        T *end() { return data_ + N; }
-        const T *begin() const { return data_; }
-        const T *end() const { return data_ + N; }
+        constexpr T *begin() { return data_; }
+        constexpr T *end() { return data_ + N; }
+        constexpr const T *begin() const { return data_; }
+        constexpr const T *end() const { return data_ + N; }
 
         /// @brief Returns a view of this Iterable's data.
         /// @details This function returns an Iterable that starts at the specified index of this Iterable's data and has the specified size.
@@ -78,7 +85,7 @@ namespace fenz
         /// @return An Iterable with the specified start index and end index.
         /// @note This function does not create a copy of the data.
         template <int Start, int End>
-        Iterable<T, End - Start> view();
+        constexpr Iterable<T, End - Start> view();
 
         /// @brief Returns a view of this Iterable's data.
         /// @details This function returns an Iterable that starts at the specified index of this Iterable's data and has the specified size.
@@ -87,7 +94,7 @@ namespace fenz
         /// @return A ConstIterable with the specified start index and end index.
         /// @note This function does not create a copy of the data.
         template <int Start, int End>
-        Iterable<const T, End - Start> view() const;
+        constexpr Iterable<const T, End - Start> view() const;
     };
 
     /// @brief A fixed-size array that owns its data.
@@ -114,13 +121,18 @@ namespace fenz
     // =======================================
 
     template <typename T, int N>
-    inline Iterable<T, N>::Iterable(T *data) : data_(data)
+    constexpr Iterable<T, N>::Iterable(T* data) : data_(data) {}
+
+    template <typename T, int N>
+    template <int M>
+    constexpr Iterable<T, N>::Iterable(T (&arr)[M]) : data_(arr)
     {
+        static_assert(M >= N, "Source array too small");
     }
 
     template <typename T, int N>
     template <int i>
-    inline T &Iterable<T, N>::at()
+    constexpr T &Iterable<T, N>::at()
     {
         static_assert(i >= 0 && i < N, "Index out of bounds");
         return data_[i];
@@ -128,7 +140,7 @@ namespace fenz
 
     template <typename T, int N>
     template <int i>
-    inline const T &Iterable<T, N>::at() const
+    constexpr const T &Iterable<T, N>::at() const
     {
         static_assert(i >= 0 && i < N, "Index out of bounds");
         return data_[i];
@@ -136,7 +148,7 @@ namespace fenz
 
     template <typename T, int N>
     template <typename Func>
-    inline void Iterable<T, N>::enumerate(Func func)
+    constexpr void Iterable<T, N>::enumerate(Func func)
     {
         for (int i = 0; i < N; ++i)
         {
@@ -146,7 +158,7 @@ namespace fenz
 
     template <typename T, int N>
     template <typename Func>
-    inline void Iterable<T, N>::enumerate(Func func) const
+    constexpr const void Iterable<T, N>::enumerate(Func func) const
     {
         for (int i = 0; i < N; ++i)
         {
@@ -156,7 +168,7 @@ namespace fenz
 
     template <typename T, int N>
     template <typename U, typename Func>
-    inline void fenz::Iterable<T, N>::zip(Iterable<U, N> &other, Func func)
+    constexpr void fenz::Iterable<T, N>::zip(Iterable<U, N> &other, Func func)
     {
         for (int i = 0; i < N; ++i)
         {
@@ -166,7 +178,7 @@ namespace fenz
 
     template <typename T, int N>
     template <typename U, typename Func>
-    inline void fenz::Iterable<T, N>::zip(const Iterable<U, N> &other, Func func) const
+    constexpr void fenz::Iterable<T, N>::zip(const Iterable<U, N> &other, Func func) const
     {
         for (int i = 0; i < N; ++i)
         {
@@ -176,17 +188,16 @@ namespace fenz
 
     template <typename T, int N>
     template <int Start, int End>
-    inline Iterable<T, End - Start> Iterable<T, N>::view()
+    constexpr Iterable<T, End - Start> Iterable<T, N>::view()
     {
         static_assert(Start >= 0 && End <= N, "Iterable out of bounds");
         static_assert(End > Start, "Size must be positive");
-
         return Iterable<T, End - Start>(data_ + Start);
     }
 
     template <typename T, int N>
     template <int Start, int End>
-    inline Iterable<const T, End - Start> Iterable<T, N>::view() const
+    constexpr Iterable<const T, End - Start> Iterable<T, N>::view() const
     {
         static_assert(Start >= 0 && End <= N, "Iterable out of bounds");
         static_assert(End > Start, "Size must be positive");
