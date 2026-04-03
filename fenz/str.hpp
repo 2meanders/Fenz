@@ -72,10 +72,8 @@ namespace fenz {
 
             std::snprintf(temp, Length + 1, fmt, Length, val);
 
-            // Transfer from temp to storage
-            this->template enumerate<>([&](char& c, int i) {
-                c = temp[i];
-            });
+            Iterable<char, Length+1> tempIterable(temp);
+            this->setTo(tempIterable.template view<0, Length>());
         }
     };
 
@@ -89,25 +87,20 @@ namespace fenz {
     constexpr Str<Length>::Str(const char (&literal)[M]) : Array<char, Length>('\0') {
         static_assert(M - 1 == Length, "Length mismatch");
 
-        this->template enumerate<>([&](char& c, int i) {
-            c = literal[i];
-        });
+        const Iterable<const char, M> literalIterable{ literal };
+        this->setTo(literalIterable.template view<0, Length>());
     }
 
     template <int Length>
     inline constexpr Str<Length>::Str(const Str& other) : Array<char, Length>('\0')
     {
-        this->template zip<>(other, [](char& dest, const char& src) {
-            dest = src;
-        });
+        this->setTo(other);
     }
 
     template <int Length>
     inline constexpr Str<Length>& Str<Length>::operator=(const Str &other)
     {
-        this->template zip<>(other, [](char& dest, const char& src) {
-            dest = src;
-        });
+        this->setTo(other);
         return *this;
     }
 
@@ -115,9 +108,7 @@ namespace fenz {
     inline constexpr Str<Length + 1> Str<Length>::operator+(char c) const
     {
         Str<Length + 1> result;
-        result.template view<0, Length>().zip(*this, [](char& dest, const char& src) constexpr {
-            dest = src;
-        });
+        result.template view<0, Length>().setTo(*this);
         result.template at<Length>() = c;
         return result;
     }
@@ -127,13 +118,9 @@ namespace fenz {
     constexpr Str<Length + M> Str<Length>::operator+(const Str<M> &other) const
     {
         Str<Length + M> result;
-        result.template view<0, Length>().zip(this->template view<0, Length>(), [](char& dest, const char& src) constexpr {
-            dest = src;
-        });
+        result.template view<0, Length>().setTo(*this);
 
-        result.template view<Length, Length + M>().zip(other.template view<0, M>(), [](char& dest, const char& src) constexpr {
-            dest = src;
-        });
+        result.template view<Length, Length + M>().setTo(other);
         return result;
     }
 }

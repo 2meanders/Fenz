@@ -1,6 +1,8 @@
 #ifndef FENZ_ARRAY_HPP
 #define FENZ_ARRAY_HPP
 
+#include <cstring>
+
 namespace fenz
 {   
     template <typename T, int N>
@@ -25,12 +27,18 @@ namespace fenz
 
     private:
         // To allow view creation
-        constexpr Iterable(T* data);
+        constexpr Iterable(T* data, int /* tag */);
     public:
         /// @brief Constructs a Iterable from a pointer to data.
         /// @param arr Pointer to the data.
-        template <int M>
-        constexpr Iterable(T (&arr)[M]);
+        constexpr Iterable(T (&arr)[N]);
+
+
+        /// @brief Sets the contents of this Iterable to the contents of another Iterable.
+        /// @param other The other Iterable to copy from.
+        template<typename U>
+        constexpr void setTo(const Iterable<U, N>& other);
+
 
         /// @brief Returns a reference to the element at the specified index.
         /// @tparam i Index of the element to access.
@@ -121,14 +129,18 @@ namespace fenz
     // =======================================
 
     template <typename T, int N>
-    constexpr Iterable<T, N>::Iterable(T* data) : data_(data) {}
+    constexpr Iterable<T, N>::Iterable(T* data, int /* tag */) : data_(data) {}
 
     template <typename T, int N>
-    template <int M>
-    constexpr Iterable<T, N>::Iterable(T (&arr)[M]) : data_(arr)
+    template <typename U>
+    inline constexpr void Iterable<T, N>::setTo(const Iterable<U, N> &other)
     {
-        static_assert(M >= N, "Source array too small");
+        static_assert(std::is_convertible<U, T>::value, "Incompatible types");
+        std::memcpy(data_, other.data_, N * sizeof(T));
     }
+
+    template <typename T, int N>
+    constexpr Iterable<T, N>::Iterable(T (&arr)[N]) : data_(arr) {}
 
     template <typename T, int N>
     template <int i>
@@ -192,7 +204,7 @@ namespace fenz
     {
         static_assert(Start >= 0 && End <= N, "Iterable out of bounds");
         static_assert(End > Start, "Size must be positive");
-        return Iterable<T, End - Start>(data_ + Start);
+        return Iterable<T, End - Start>(data_ + Start, 0);
     }
 
     template <typename T, int N>
@@ -202,7 +214,7 @@ namespace fenz
         static_assert(Start >= 0 && End <= N, "Iterable out of bounds");
         static_assert(End > Start, "Size must be positive");
 
-        return Iterable<const T, End - Start>(data_ + Start);
+        return Iterable<const T, End - Start>(data_ + Start, 0);
     }
 
     template <typename T, int N>
