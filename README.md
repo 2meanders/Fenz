@@ -1,6 +1,6 @@
 # Fenz
 
-A set of c++ libraries made for maximum safety while still being performant.
+A set of c++ libraries made for maximum **safety** and performance.
 
 ## Array (fenz/array.hpp)
 
